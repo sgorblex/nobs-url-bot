@@ -43,7 +43,7 @@ func main() {
 		repl, ok := nobs.Cleanup(update.InlineQuery.Query)
 		if ok {
 			article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Remove bs", repl)
-			article.Description = update.InlineQuery.Query
+			article.Description = repl
 
 			inlineConf := tgbotapi.InlineConfig{
 				InlineQueryID: update.InlineQuery.ID,
