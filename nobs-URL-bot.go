@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
-	nobs "github.com/sgorblex/nobs-url/lib"
+	"fmt"
 	"log"
 	"os"
+	"strings"
+
+	nobs "github.com/sgorblex/nobs-url/lib"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -36,24 +39,35 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.InlineQuery == nil { // if no inline query, ignore it
-			continue
-		}
-
-		repl, ok := nobs.Cleanup(update.InlineQuery.Query)
-		if ok {
-			article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Remove bs", repl)
-			article.Description = repl
-
-			inlineConf := tgbotapi.InlineConfig{
-				InlineQueryID: update.InlineQuery.ID,
-				IsPersonal:    true,
-				CacheTime:     0,
-				Results:       []interface{}{article},
+		if update.InlineQuery != nil {
+			query := strings.SplitN(strings.TrimSpace(update.InlineQuery.Query), " ", 2)
+			fmt.Println(query)
+			if len(query) < 1 || !nobs.IsURL(query[0]) {
+				continue
 			}
+			clean, ok := nobs.Cleanup(query[0])
+			if ok {
+				var repl, desc string
+				if len(query) == 2 {
+					repl = "[" + query[1] + "](" + clean + ")"
+					desc = query[1] + ": " + clean
+				} else {
+					repl = clean
+					desc = clean
+				}
+				article := tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Remove bs", repl)
+				article.Description = desc
 
-			if _, err := bot.Request(inlineConf); err != nil {
-				log.Println(err)
+				inlineConf := tgbotapi.InlineConfig{
+					InlineQueryID: update.InlineQuery.ID,
+					IsPersonal:    true,
+					CacheTime:     0,
+					Results:       []interface{}{article},
+				}
+
+				if _, err := bot.Request(inlineConf); err != nil {
+					log.Println(err)
+				}
 			}
 		}
 	}
