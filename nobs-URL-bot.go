@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -41,33 +40,37 @@ func main() {
 	for update := range updates {
 		if update.InlineQuery != nil {
 			query := strings.SplitN(strings.TrimSpace(update.InlineQuery.Query), " ", 2)
-			fmt.Println(query)
 			if len(query) < 1 || !nobs.IsURL(query[0]) {
 				continue
 			}
-			clean, ok := nobs.Cleanup(query[0])
-			if ok {
-				var repl, desc string
-				if len(query) == 2 {
-					repl = "[" + query[1] + "](" + clean + ")"
-					desc = query[1] + ": " + clean
-				} else {
-					repl = clean
-					desc = clean
-				}
-				article := tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Remove bs", repl)
-				article.Description = desc
+			clean, touched := nobs.Cleanup(query[0])
+			var repl, desc string
+			if len(query) == 2 {
+				repl = "[" + query[1] + "](" + clean + ")"
+				desc = query[1] + ": " + clean
+			} else {
+				repl = clean
+				desc = clean
+			}
+			if !touched {
+				desc += " (untouched)"
+				log.Println(query[0])
+			} else {
+				log.Println(query[0] + " -> " + clean)
+			}
+			repl = strings.ReplaceAll(repl, "_", "\\_")
+			article := tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Remove bs", repl)
+			article.Description = desc
 
-				inlineConf := tgbotapi.InlineConfig{
-					InlineQueryID: update.InlineQuery.ID,
-					IsPersonal:    true,
-					CacheTime:     0,
-					Results:       []interface{}{article},
-				}
+			inlineConf := tgbotapi.InlineConfig{
+				InlineQueryID: update.InlineQuery.ID,
+				IsPersonal:    true,
+				CacheTime:     0,
+				Results:       []interface{}{article},
+			}
 
-				if _, err := bot.Request(inlineConf); err != nil {
-					log.Println(err)
-				}
+			if _, err := bot.Request(inlineConf); err != nil {
+				log.Println(err)
 			}
 		}
 	}
