@@ -1,0 +1,3 @@
+[submodule "nobs-url"]
+	path = nobs-url
+	url = sg:sgorblex/nobs-url
